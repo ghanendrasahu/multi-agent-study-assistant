@@ -101,11 +101,11 @@ def _get_anthropic(model: str):
 
 def _get_ollama(model: str):
     try:
-        from langchain_community.chat_models import ChatOllama
+        from langchain_ollama import ChatOllama
         print(f"[LLM] Using Ollama local model: {model}")
         return ChatOllama(
             model=model,
             temperature=0.3,
         )
     except ImportError:
-        raise ImportError("Run: pip install langchain-community")
+        raise ImportError("Run: pip install langchain-ollama")
