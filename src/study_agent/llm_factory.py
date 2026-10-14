@@ -20,6 +20,14 @@ from __future__ import annotations
 import os
 
 
+def _timeout_seconds() -> float:
+    """Per-request timeout for every LLM provider (default 60s)."""
+    try:
+        return max(5.0, float(os.getenv("LLM_TIMEOUT_SECONDS", "60")))
+    except ValueError:
+        return 60.0
+
+
 def get_llm(provider: str | None = None, model: str | None = None):
     """
     Create and return a LangChain chat model instance.
@@ -88,6 +96,8 @@ def _get_groq(model: str):
             base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
             temperature=0.3,
             max_tokens=2000,
+            timeout=_timeout_seconds(),
+            max_retries=1,
         )
     except ImportError:
         raise ImportError("Run: pip install langchain-openai")
@@ -96,11 +106,14 @@ def _get_groq(model: str):
 def _get_openai(model: str):
     try:
         from langchain_openai import ChatOpenAI
+
         print(f"[LLM] Using OpenAI: {model}")
         return ChatOpenAI(
             model=model,
-            temperature=0.3,   # Low temp for factual study notes
+            temperature=0.3,  # Low temp for factual study notes
             max_tokens=2000,
+            timeout=_timeout_seconds(),
+            max_retries=1,
         )
     except ImportError:
         raise ImportError("Run: pip install langchain-openai")
@@ -109,11 +122,14 @@ def _get_openai(model: str):
 def _get_anthropic(model: str):
     try:
         from langchain_anthropic import ChatAnthropic
+
         print(f"[LLM] Using Anthropic: {model}")
         return ChatAnthropic(
             model=model,
             temperature=0.3,
             max_tokens=2000,
+            timeout=_timeout_seconds(),
+            max_retries=1,
         )
     except ImportError:
         raise ImportError("Run: pip install langchain-anthropic")
@@ -122,10 +138,12 @@ def _get_anthropic(model: str):
 def _get_ollama(model: str):
     try:
         from langchain_ollama import ChatOllama
+
         print(f"[LLM] Using Ollama local model: {model}")
         return ChatOllama(
             model=model,
             temperature=0.3,
+            client_kwargs={"timeout": _timeout_seconds()},
         )
     except ImportError:
         raise ImportError("Run: pip install langchain-ollama")

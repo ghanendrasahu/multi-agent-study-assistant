@@ -36,7 +36,9 @@ def wikipedia_search(query: str, sentences: int = 10) -> str:
         wiki = wikipediaapi.Wikipedia(
             language="en",
             extract_format=wikipediaapi.ExtractFormat.WIKI,
-            user_agent="StudyAssistant/1.0 (subrat-study-agent)"
+            user_agent="StudyAssistant/1.0 (subrat-study-agent)",
+            timeout=10,
+            max_retries=1,
         )
 
         page = wiki.page(query)
@@ -48,8 +50,10 @@ def wikipedia_search(query: str, sentences: int = 10) -> str:
             return f"[Wikipedia: {page.title}]\n{truncated}..."
 
         # Try a broader search if exact page not found
-        return f"[Wikipedia] No exact page found for '{query}'. " \
-               f"Consider searching for a more specific term."
+        return (
+            f"[Wikipedia] No exact page found for '{query}'. "
+            f"Consider searching for a more specific term."
+        )
 
     except ImportError:
         return "[Wikipedia] wikipedia-api not installed. Run: pip install wikipedia-api"
@@ -74,7 +78,7 @@ def duckduckgo_search(query: str, max_results: int = 3) -> str:
         from duckduckgo_search import DDGS
 
         results = []
-        with DDGS() as ddgs:
+        with DDGS(timeout=10) as ddgs:
             for r in ddgs.text(query, max_results=max_results):
                 results.append(
                     f"Title: {r.get('title', 'N/A')}\n"

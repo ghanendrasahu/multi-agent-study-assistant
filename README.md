@@ -16,7 +16,7 @@ You give it any topic (e.g. *"Explain transformer self-attention"*) and a **pipe
 - ✅ A structured study note (concept, examples, analogies, key takeaways)
 - ✅ A critical review / gap analysis
 - ✅ A final polished answer stored in long-term vector memory
-- ✅ Ability to query your accumulated study notes in future sessions
+- ✅ Ability to query your accumulated study notes later in the same browser session
 
 ---
 
@@ -141,7 +141,7 @@ Multi-Agent-Study-Assistant/
 
 1. **Why multi-agent?** Single agents hit context limits; specialized agents are more reliable
 2. **Why RAG?** Grounds answers in retrieved knowledge, reduces hallucination  
-3. **Why ChromaDB?** Persistent semantic memory across sessions — the agent "remembers" what it studied
+3. **Why ChromaDB?** Persistent semantic memory scoped per browser session — the agent "remembers" what it studied
 4. **Reflexion pattern** — the Critic agent scores the answer; below threshold → loops back to Analyst
 5. **State management** — TypedDict ensures every agent reads/writes the same keys safely
 6. **Fallback design** — max_iterations guard prevents infinite critique loops
