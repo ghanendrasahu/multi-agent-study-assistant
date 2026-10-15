@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -38,6 +39,10 @@ if "result" not in st.session_state:
     st.session_state.result = None
 if "history" not in st.session_state:
     st.session_state.history = []
+# Memory is namespaced per browser session: one visitor's notes are never
+# retrieved into another visitor's prompts.
+if "memory_session_id" not in st.session_state:
+    st.session_state.memory_session_id = uuid.uuid4().hex
 
 
 @st.cache_resource(show_spinner=False)
@@ -200,6 +205,7 @@ if submitted and query.strip():
                         query=query.strip(),
                         topic=topic.strip() or query.strip()[:50],
                         max_iterations=max_iter,
+                        session_id=st.session_state.memory_session_id,
                         progress_callback=progress_callback,
                     )
                 except Exception:
@@ -237,7 +243,12 @@ if submitted and query.strip():
                             "label": "Revision rounds",
                             "value": str(result.get("iteration_count", 1)),
                         },
-                        {"label": "Stored notes", "value": str(memory.count())},
+                        {
+                            "label": "Stored notes",
+                            "value": str(
+                                memory.count(st.session_state.memory_session_id)
+                            ),
+                        },
                     ]
                 )
                 st.markdown(result["final_answer"])
@@ -265,13 +276,13 @@ if submitted and query.strip():
 
 ui.section(
     "Long-term memory",
-    "Every finished note is stored and retrieved by semantic similarity on later runs.",
+    "Notes from this visit are stored for this session and reused on later runs.",
 )
 
 try:
     mem = _get_memory()
-    count = mem.count()
-    topics = mem.list_topics()
+    count = mem.count(st.session_state.memory_session_id)
+    topics = mem.list_topics(st.session_state.memory_session_id)
 except Exception:
     ui.empty_state(
         "Memory is unavailable",
@@ -296,7 +307,11 @@ else:
         with right:
             search_mem = st.text_input("Search memory", key="mem_search")
             if search_mem:
-                results = mem.retrieve(search_mem, n_results=3)
+                results = mem.retrieve(
+                    search_mem,
+                    n_results=3,
+                    session_id=st.session_state.memory_session_id,
+                )
                 if results:
                     for item in results:
                         label = f"{item['topic']} - similarity {item.get('similarity', 0):.2f}"

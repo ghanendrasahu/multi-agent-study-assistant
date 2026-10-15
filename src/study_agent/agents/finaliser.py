@@ -51,14 +51,16 @@ def finaliser_node(state: AgentState, llm, memory: VectorMemory) -> dict:
 
     messages = [
         SystemMessage(content=FINALISER_SYSTEM_PROMPT),
-        HumanMessage(content=f"""
+        HumanMessage(
+            content=f"""
 APPROVED STUDY NOTE (quality score: {score:.2f}):
 {draft}
 
 ORIGINAL QUERY: {query}
 
 Please finalise this note. Add the quality score header and session summary section.
-""")
+"""
+        ),
     ]
 
     response = llm.invoke(messages)
@@ -67,30 +69,29 @@ Please finalise this note. Add the quality score header and session summary sect
     # ── Save to long-term memory (ChromaDB) ───────────────────────────────
     memory_saved = False
     try:
-        memory.store(
+        memory_saved = memory.store(
             content=final_answer,
             topic=topic,
             query=query,
             score=score,
             session_id=session_id,
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
         )
-        memory_saved = True
     except Exception as e:
         # Non-fatal: memory write failure should not crash the agent
         print(f"[WARNING] Memory write failed: {e}")
 
     # ── Append memory confirmation footer ─────────────────────────────────
     memory_footer = (
-        "\n\n---\n✅ **Saved to long-term study memory** — "
+        "\n\n---\n**Saved to long-term study memory** — "
         "this note will be retrieved in future sessions on related topics."
         if memory_saved
-        else "\n\n---\n⚠️ Memory save skipped (storage unavailable)"
+        else "\n\n---\nMemory save skipped (storage unavailable or score below threshold)"
     )
 
     final_with_footer = final_answer + memory_footer
 
     return {
         "final_answer": final_with_footer,
-        "messages": [AIMessage(content=final_with_footer, name="finaliser")]
+        "messages": [AIMessage(content=final_with_footer, name="finaliser")],
     }

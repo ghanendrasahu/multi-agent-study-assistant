@@ -53,8 +53,8 @@ def researcher_node(state: AgentState, llm, memory: VectorMemory) -> dict:
     """
     query = state["user_query"]
 
-    # ── Step 1: Query long-term memory (RAG retrieval) ────────────────────
-    past_notes = memory.retrieve(query, n_results=3)
+    # ── Step 1: Query long-term memory (RAG retrieval, session-scoped) ────
+    past_notes = memory.retrieve(query, n_results=3, session_id=state.get("session_id"))
     memory_context = ""
     if past_notes:
         memory_context = "=== RELEVANT PAST STUDY NOTES ===\n"
@@ -80,7 +80,8 @@ WEB SEARCH RESULTS:
     # ── Step 5: LLM synthesises into a research summary ───────────────────
     messages = [
         SystemMessage(content=RESEARCHER_SYSTEM_PROMPT),
-        HumanMessage(content=f"""
+        HumanMessage(
+            content=f"""
 {memory_context}
 
 SEARCH RESULTS TO SYNTHESISE:
@@ -95,7 +96,8 @@ Structure it as:
 3. Key Terminology
 4. Why It Matters
 5. Connections to Related Concepts
-""")
+"""
+        ),
     ]
 
     response = llm.invoke(messages)
@@ -107,6 +109,6 @@ Structure it as:
         "memory_context": memory_context,
         "messages": [
             HumanMessage(content=f"Research query: {query}"),
-            AIMessage(content=research_summary, name="researcher")
-        ]
+            AIMessage(content=research_summary, name="researcher"),
+        ],
     }

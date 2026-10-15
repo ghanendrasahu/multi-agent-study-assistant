@@ -30,7 +30,9 @@ from __future__ import annotations
 
 import os
 
-CHROMA_PERSIST_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "chroma_db")
+CHROMA_PERSIST_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "data", "chroma_db"
+)
 COLLECTION_NAME = "study_notes"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Free, fast, 384 dimensions
 EMBEDDING_BACKEND = os.getenv("STUDY_AGENT_EMBEDDING", "onnx").strip().lower()
@@ -81,13 +83,15 @@ class VectorMemory:
             self._collection = self._client.get_or_create_collection(
                 name=COLLECTION_NAME,
                 embedding_function=self._embedding_fn,
-                metadata={"hnsw:space": "cosine"}  # HNSW index, cosine distance
+                metadata={"hnsw:space": "cosine"},  # HNSW index, cosine distance
             )
 
             self._available = True
             print(f"[Memory] ChromaDB initialised at {self.persist_dir}")
-            print(f"[Memory] Collection '{COLLECTION_NAME}' has "
-                  f"{self._collection.count()} notes stored.")
+            print(
+                f"[Memory] Collection '{COLLECTION_NAME}' has "
+                f"{self._collection.count()} notes stored."
+            )
 
         except ImportError as e:
             print(f"[Memory] ChromaDB/embedding backend not installed: {e}")
@@ -109,29 +113,32 @@ class VectorMemory:
         timestamp: str,
     ) -> bool:
         """
-        Store a study note in long-term memory.
+        Store a study note in long-term memory for one session.
 
         Only stores if score >= 0.65 (quality gate = memory consolidation strategy).
-        Uses the query as the document ID — upserts to avoid exact duplicates.
+        The document ID is scoped to the session, so two visitors asking the
+        same question keep separate notes.
         """
         if score < 0.65:
             print(f"[Memory] Score {score:.2f} below threshold — not storing.")
             return False
 
-        doc_id = _make_id(query)
+        doc_id = _make_id(session_id, query)
 
         if self._available and self._collection is not None:
             try:
                 self._collection.upsert(
                     ids=[doc_id],
                     documents=[content],
-                    metadatas=[{
-                        "topic": topic,
-                        "query": query,
-                        "score": str(score),
-                        "session_id": session_id,
-                        "timestamp": timestamp,
-                    }]
+                    metadatas=[
+                        {
+                            "topic": topic,
+                            "query": query,
+                            "score": str(score),
+                            "session_id": session_id,
+                            "timestamp": timestamp,
+                        }
+                    ],
                 )
                 print(f"[Memory] Stored '{topic}' (score={score:.2f})")
                 return True
@@ -140,22 +147,36 @@ class VectorMemory:
                 return False
         else:
             # Fallback in-memory store
-            self._fallback_store.append({
-                "id": doc_id, "content": content,
-                "topic": topic, "query": query,
-                "score": score, "timestamp": timestamp
-            })
+            self._fallback_store.append(
+                {
+                    "id": doc_id,
+                    "content": content,
+                    "topic": topic,
+                    "query": query,
+                    "score": score,
+                    "session_id": session_id,
+                    "timestamp": timestamp,
+                }
+            )
             return True
 
-    def retrieve(self, query: str, n_results: int = 3) -> list[dict]:
+    def retrieve(
+        self, query: str, n_results: int = 3, session_id: str | None = None
+    ) -> list[dict]:
         """
-        Retrieve semantically similar study notes for a query.
+        Retrieve semantically similar notes from ONE session.
+
+        Memory is never shared across sessions: without a session_id there is
+        nothing to retrieve, which prevents one visitor's notes from being
+        injected into another visitor's prompt.
 
         Returns a list of dicts: {content, topic, query, score}
         Returns [] if no relevant notes found.
 
         Uses cosine similarity via HNSW index (from the document section on HNSW).
         """
+        if not session_id:
+            return []
         if self._available and self._collection is not None:
             try:
                 if self._collection.count() == 0:
@@ -164,7 +185,8 @@ class VectorMemory:
                 results = self._collection.query(
                     query_texts=[query],
                     n_results=min(n_results, self._collection.count()),
-                    include=["documents", "metadatas", "distances"]
+                    where={"session_id": session_id},
+                    include=["documents", "metadatas", "distances"],
                 )
 
                 retrieved = []
@@ -177,13 +199,15 @@ class VectorMemory:
                     # Convert to similarity: 1 - (dist / 2)
                     similarity = 1.0 - (dist / 2.0)
                     if similarity > 0.3:  # Similarity threshold filter
-                        retrieved.append({
-                            "content": doc,
-                            "topic": meta.get("topic", ""),
-                            "query": meta.get("query", ""),
-                            "score": float(meta.get("score", 0)),
-                            "similarity": similarity
-                        })
+                        retrieved.append(
+                            {
+                                "content": doc,
+                                "topic": meta.get("topic", ""),
+                                "query": meta.get("query", ""),
+                                "score": float(meta.get("score", 0)),
+                                "similarity": similarity,
+                            }
+                        )
 
                 return retrieved
 
@@ -192,37 +216,64 @@ class VectorMemory:
                 return []
         else:
             # Fallback: linear scan (no embeddings)
+            matches = [
+                n for n in self._fallback_store if n.get("session_id") == session_id
+            ]
             return [
-                {"content": n["content"], "topic": n["topic"],
-                 "query": n["query"], "score": n["score"], "similarity": 1.0}
-                for n in self._fallback_store[-n_results:]
+                {
+                    "content": n["content"],
+                    "topic": n["topic"],
+                    "query": n["query"],
+                    "score": n["score"],
+                    "similarity": 1.0,
+                }
+                for n in matches[-n_results:]
             ]
 
-    def list_topics(self) -> list[str]:
-        """List all topics stored in memory."""
+    def list_topics(self, session_id: str | None = None) -> list[str]:
+        """List topics stored for one session."""
+        if not session_id:
+            return []
         if self._available and self._collection is not None:
             try:
-                results = self._collection.get(include=["metadatas"])
+                results = self._collection.get(
+                    where={"session_id": session_id}, include=["metadatas"]
+                )
                 return list({m.get("topic", "") for m in results["metadatas"]})
             except Exception:
                 return []
-        return [n["topic"] for n in getattr(self, "_fallback_store", [])]
+        return [
+            n["topic"]
+            for n in getattr(self, "_fallback_store", [])
+            if n.get("session_id") == session_id
+        ]
 
-    def count(self) -> int:
-        """Return number of notes in memory."""
+    def count(self, session_id: str | None = None) -> int:
+        """Return number of notes stored for one session."""
+        if not session_id:
+            return 0
         if self._available and self._collection is not None:
             try:
-                return self._collection.count()
+                return len(
+                    self._collection.get(where={"session_id": session_id})["ids"]
+                )
             except Exception:
                 return 0
-        return len(getattr(self, "_fallback_store", []))
+        return len(
+            [
+                n
+                for n in getattr(self, "_fallback_store", [])
+                if n.get("session_id") == session_id
+            ]
+        )
 
     @property
     def is_available(self) -> bool:
         return self._available
 
 
-def _make_id(query: str) -> str:
-    """Create a stable document ID from a query string."""
+def _make_id(session_id: str, query: str) -> str:
+    """Create a stable document ID scoped to one session."""
     import hashlib
-    return hashlib.md5(query.lower().strip().encode()).hexdigest()
+
+    return hashlib.md5(f"{session_id}:{query.lower().strip()}".encode()).hexdigest()
