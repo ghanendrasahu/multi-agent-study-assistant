@@ -49,6 +49,10 @@ Repository = "https://github.com/ghanendrasahu/Multi-Agent-Study-Assistant.git"
 study-agent = "study_agent.__main__:main"
 study-agent-ui = "study_agent.app:run"
 
+[tool.pytest.ini_options]
+# Tests import the src-layout package without requiring an editable install.
+pythonpath = ["src"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["study_agent*"]

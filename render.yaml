@@ -1,0 +1,21 @@
+# Render blueprint for multi-agent-study-assistant.
+# Mirrors the live service configuration; inert until an explicit Blueprint Sync.
+# Secret values are declared with sync:false and stay in the Render dashboard.
+services:
+- type: web
+  name: multi-agent-study-assistant-app
+  runtime: python
+  plan: free
+  region: oregon
+  branch: main
+  buildCommand: pip install -r requirements.txt
+  startCommand: sh -c "streamlit run app.py --server.port=${PORT:-10000} --server.address=0.0.0.0 --server.headless=true"
+  healthCheckPath: /_stcore/health
+  autoDeploy: true
+  envVars:
+  - key: GROQ_API_KEY
+    sync: false
+  - key: GROQ_MODEL
+    value: openai/gpt-oss-20b
+  - key: OPENAI_API_KEY
+    sync: false
