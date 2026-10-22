@@ -1,28 +1,30 @@
-"""Smoke tests: every agent module compiles and exposes its public surface.
+"""Smoke tests: the package and its agents import cleanly.
 
-The modules are loaded directly from their files so the test never triggers
-an import-time side effect (no API key or model download required).
+`src` is put on the path so the package resolves exactly as it does in
+production, and every agent module is imported to prove the surface exists.
 """
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
+import sys
 from pathlib import Path
 
 import pytest
 
-AGENTS = Path(__file__).resolve().parents[1] / "src" / "study_agent" / "agents"
+SRC = str(Path(__file__).resolve().parents[1] / "src")
+if SRC not in sys.path:
+    sys.path.insert(0, SRC)
 
 
-def _load(path: Path):
-    spec = importlib.util.spec_from_file_location(f"smoke_{path.stem}", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def test_package_imports():
+    module = importlib.import_module("study_agent")
+
+    assert module is not None
 
 
 @pytest.mark.parametrize("name", ["analyst", "critic", "finaliser"])
-def test_agent_module_loads(name):
-    module = _load(AGENTS / f"{name}.py")
+def test_agent_modules_are_importable(name):
+    module = importlib.import_module(f"study_agent.agents.{name}")
 
     assert module is not None
