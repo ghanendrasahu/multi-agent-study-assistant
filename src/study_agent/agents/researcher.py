@@ -21,8 +21,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from study_agent.agents.state import AgentState
 from study_agent.memory.vector_store import VectorMemory
-from study_agent.tools.search import wikipedia_search, duckduckgo_search
-
+from study_agent.tools.search import duckduckgo_search, wikipedia_search
 
 # ── System prompt (Role/Persona prompting pattern) ─────────────────────────
 RESEARCHER_SYSTEM_PROMPT = """You are an expert research assistant specialising in \

@@ -23,7 +23,6 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from study_agent.agents.state import AgentState
 from study_agent.memory.vector_store import VectorMemory
 
-
 FINALISER_SYSTEM_PROMPT = """You are the final editor of an AI study assistant. \
 Your job is to take an approved study note and make it perfect.
 

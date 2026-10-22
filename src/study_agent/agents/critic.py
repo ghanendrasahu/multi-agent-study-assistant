@@ -23,7 +23,6 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from study_agent.agents.state import AgentState
 
-
 CRITIC_SYSTEM_PROMPT = """You are a strict but fair academic reviewer evaluating \
 AI/ML study notes for a student who will use them in interviews and exams.
 

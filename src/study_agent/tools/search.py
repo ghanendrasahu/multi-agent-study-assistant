@@ -54,7 +54,7 @@ def wikipedia_search(query: str, sentences: int = 10) -> str:
     except ImportError:
         return "[Wikipedia] wikipedia-api not installed. Run: pip install wikipedia-api"
     except Exception as e:
-        return f"[Wikipedia] Search failed: {str(e)}"
+        return f"[Wikipedia] Search failed: {e!s}"
 
 
 def duckduckgo_search(query: str, max_results: int = 3) -> str:
@@ -91,7 +91,7 @@ def duckduckgo_search(query: str, max_results: int = 3) -> str:
     except ImportError:
         return "[DuckDuckGo] duckduckgo-search not installed. Run: pip install duckduckgo-search"
     except Exception as e:
-        return f"[DuckDuckGo] Search failed: {str(e)}"
+        return f"[DuckDuckGo] Search failed: {e!s}"
 
 
 def combined_search(query: str) -> str:

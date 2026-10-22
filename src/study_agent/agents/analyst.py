@@ -20,7 +20,6 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from study_agent.agents.state import AgentState
 
-
 # ── Few-shot example embedded in system prompt ─────────────────────────────
 FEW_SHOT_EXAMPLE = """
 EXAMPLE STUDY NOTE (for topic: "Cosine Similarity"):

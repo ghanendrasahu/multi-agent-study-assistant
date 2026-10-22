@@ -1,9 +1,13 @@
-from study_agent.tools.search import wikipedia_search, duckduckgo_search, combined_search
 from study_agent.tools.calculator import safe_calculate
+from study_agent.tools.search import (
+    combined_search,
+    duckduckgo_search,
+    wikipedia_search,
+)
 
 __all__ = [
-    "wikipedia_search",
-    "duckduckgo_search",
     "combined_search",
+    "duckduckgo_search",
     "safe_calculate",
+    "wikipedia_search",
 ]

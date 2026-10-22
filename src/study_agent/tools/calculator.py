@@ -15,7 +15,6 @@ import ast
 import math
 import operator as op
 
-
 # Whitelisted operations — safe subset of Python math
 ALLOWED_OPERATORS = {
     ast.Add: op.add,

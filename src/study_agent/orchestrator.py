@@ -24,17 +24,17 @@ This implements the Reflexion architecture from the document:
 from __future__ import annotations
 
 import uuid
-from typing import Optional, Callable
+from collections.abc import Callable
 
-from study_agent.agents.state import AgentState
-from study_agent.agents.researcher import researcher_node
 from study_agent.agents.analyst import analyst_node
 from study_agent.agents.critic import critic_node, route_after_critique
 from study_agent.agents.finaliser import finaliser_node
+from study_agent.agents.researcher import researcher_node
+from study_agent.agents.state import AgentState
 from study_agent.memory.vector_store import VectorMemory
 
 
-def build_graph(llm, memory: VectorMemory) -> "StudyAgentGraph":
+def build_graph(llm, memory: VectorMemory) -> StudyAgentGraph:
     """
     Build and compile the multi-agent graph.
 
@@ -74,8 +74,8 @@ class StudyAgentGraph:
         query: str,
         topic: str = "",
         max_iterations: int = 2,
-        session_id: Optional[str] = None,
-        progress_callback: Optional[Callable[[str, str], None]] = None,
+        session_id: str | None = None,
+        progress_callback: Callable[[str, str], None] | None = None,
     ) -> AgentState:
         """
         Run the full multi-agent pipeline for a given query.

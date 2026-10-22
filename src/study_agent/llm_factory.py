@@ -17,10 +17,9 @@ Usage:
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 
-def get_llm(provider: Optional[str] = None, model: Optional[str] = None):
+def get_llm(provider: str | None = None, model: str | None = None):
     """
     Create and return a LangChain chat model instance.
 
