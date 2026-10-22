@@ -15,7 +15,6 @@ All tools return plain strings — easy for the LLM to consume.
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 
 def wikipedia_search(query: str, sentences: int = 10) -> str:

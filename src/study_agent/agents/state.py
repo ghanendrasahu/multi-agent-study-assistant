@@ -14,7 +14,7 @@ This is the most critical design decision in a LangGraph workflow.
 from __future__ import annotations
 
 import operator
-from typing import Annotated, Optional
+from typing import Annotated
 from typing_extensions import TypedDict
 
 

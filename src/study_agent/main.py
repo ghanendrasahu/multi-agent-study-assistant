@@ -1,6 +1,6 @@
 """
 main.py
-───────
+â”€â”€â”€â”€â”€â”€â”€
 CLI entry point for the Multi-Agent Study Assistant.
 
 Usage:
@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from dotenv import load_dotenv
 
@@ -22,7 +21,7 @@ load_dotenv()  # Load .env file if present
 
 def main():
     parser = argparse.ArgumentParser(
-        description="🤖 Multi-Agent Study Assistant — GenAI + Agentic AI Demo"
+        description="ðŸ¤– Multi-Agent Study Assistant â€” GenAI + Agentic AI Demo"
     )
     parser.add_argument("--query", "-q", type=str, help="Study query/question")
     parser.add_argument("--topic", "-t", type=str, help="Topic label for memory")
@@ -37,12 +36,12 @@ def main():
                         help="LLM provider (auto-detects from env if not set)")
     args = parser.parse_args()
 
-    # ── Try rich for pretty output, fall back to print ────────────────────
+    # â”€â”€ Try rich for pretty output, fall back to print â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         from rich.console import Console
         from rich.panel import Panel
         from rich.markdown import Markdown
-        from rich.progress import Progress, SpinnerColumn, TextColumn
+        from rich.progress import   # noqa: F401
         from rich import print as rprint
         console = Console()
         USE_RICH = True
@@ -64,9 +63,9 @@ def main():
 
     def success(text: str):
         if USE_RICH:
-            console.print(f"[green]✅ {text}[/green]")
+            console.print(f"[green]âœ… {text}[/green]")
         else:
-            print(f"✅ {text}")
+            print(f"âœ… {text}")
 
     def show_markdown(text: str):
         if USE_RICH:
@@ -74,11 +73,11 @@ def main():
         else:
             print(text)
 
-    # ── Banner ─────────────────────────────────────────────────────────────
-    header("🤖 Multi-Agent Study Assistant")
+    # â”€â”€ Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    header("ðŸ¤– Multi-Agent Study Assistant")
     info("Demonstrating: GenAI + Agentic AI + RAG + Multi-Agent Orchestration")
 
-    # ── Initialise components ──────────────────────────────────────────────
+    # â”€â”€ Initialise components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     from study_agent.llm_factory import get_llm
     from study_agent.memory.vector_store import VectorMemory
     from study_agent.orchestrator import build_graph
@@ -92,34 +91,34 @@ def main():
     memory = VectorMemory()
     graph = build_graph(llm=llm, memory=memory)
 
-    # ── Show graph topology ────────────────────────────────────────────────
+    # â”€â”€ Show graph topology â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if args.show_graph:
         print(graph.get_graph_description())
         return
 
-    # ── List memory ────────────────────────────────────────────────────────
+    # â”€â”€ List memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if args.list_memory:
         topics = memory.list_topics()
         count = memory.count()
-        header(f"📚 Long-Term Memory ({count} notes stored)")
+        header(f"ðŸ“š Long-Term Memory ({count} notes stored)")
         if topics:
             for t in sorted(topics):
-                print(f"  • {t}")
+                print(f"  â€¢ {t}")
         else:
             print("  No notes stored yet. Run a query to start building memory.")
         return
 
-    # ── Get query ──────────────────────────────────────────────────────────
+    # â”€â”€ Get query â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     query = args.query
     if not query:
-        print("\n" + "─" * 60)
-        print("💡 Example queries:")
-        print("  • Explain transformer self-attention mechanism")
-        print("  • What is RAG and how does it reduce hallucination?")
-        print("  • Explain the ReAct agent pattern with an example")
-        print("  • What is cosine similarity and why use it for embeddings?")
-        print("  • Explain LangGraph StateGraph with nodes and edges")
-        print("─" * 60 + "\n")
+        print("\n" + "â”€" * 60)
+        print("ðŸ’¡ Example queries:")
+        print("  â€¢ Explain transformer self-attention mechanism")
+        print("  â€¢ What is RAG and how does it reduce hallucination?")
+        print("  â€¢ Explain the ReAct agent pattern with an example")
+        print("  â€¢ What is cosine similarity and why use it for embeddings?")
+        print("  â€¢ Explain LangGraph StateGraph with nodes and edges")
+        print("â”€" * 60 + "\n")
         query = input("Enter your study query: ").strip()
         if not query:
             print("No query provided. Exiting.")
@@ -127,19 +126,19 @@ def main():
 
     topic = args.topic or query[:50]
 
-    # ── Run the agent graph ────────────────────────────────────────────────
-    header(f"📖 Studying: {query}")
+    # â”€â”€ Run the agent graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    header(f"ðŸ“– Studying: {query}")
 
     agent_steps = []
 
     def progress_callback(agent: str, status: str):
         agent_steps.append((agent, status))
         emoji = {
-            "researcher": "🔍",
-            "analyst": "✍️",
-            "critic": "🔎",
-            "finaliser": "✨"
-        }.get(agent.lower(), "⚙️")
+            "researcher": "ðŸ”",
+            "analyst": "âœï¸",
+            "critic": "ðŸ”Ž",
+            "finaliser": "âœ¨"
+        }.get(agent.lower(), "âš™ï¸")
         if USE_RICH:
             console.print(f"  {emoji} [bold]{agent.upper()}[/bold]: {status}")
         else:
@@ -153,26 +152,26 @@ def main():
             progress_callback=progress_callback,
         )
     except Exception as e:
-        print(f"\n❌ Agent pipeline failed: {e}")
+        print(f"\nâŒ Agent pipeline failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
-    # ── Display final answer ───────────────────────────────────────────────
-    header("📝 Final Study Note")
+    # â”€â”€ Display final answer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    header("ðŸ“ Final Study Note")
     show_markdown(result["final_answer"])
 
-    # ── Summary stats ──────────────────────────────────────────────────────
-    print("\n" + "─" * 60)
+    # â”€â”€ Summary stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    print("\n" + "â”€" * 60)
     info(f"Quality score: {result['critique_score']:.2f}/1.00")
     info(f"Iterations: {result['iteration_count']}")
     info(f"Memory notes stored: {memory.count()}")
     info(f"Session ID: {result['session_id']}")
     success("Study note saved to long-term memory!")
 
-    # ── Option to query memory ─────────────────────────────────────────────
-    print("\n" + "─" * 60)
-    another = input("\n📚 Ask another question? (or press Enter to exit): ").strip()
+    # â”€â”€ Option to query memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    print("\n" + "â”€" * 60)
+    another = input("\nðŸ“š Ask another question? (or press Enter to exit): ").strip()
     if another:
         # Recursive call for another query (demonstrates memory retrieval)
         import subprocess
