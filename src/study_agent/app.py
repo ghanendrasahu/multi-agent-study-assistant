@@ -1,91 +1,60 @@
-"""
-app.py
-──────
-Streamlit web UI for the Multi-Agent Study Assistant.
-
-Run with: streamlit run app.py
-
-Features:
-  - Real-time agent progress updates using st.status()
-  - Study note displayed as formatted Markdown
-  - Memory browser: view all past stored notes
-  - Agent pipeline diagram embedded in sidebar
-  - Query examples for quick demos
-"""
+"""Streamlit web UI for the Multi-Agent Study Assistant."""
 
 from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
+try:
+    from study_agent import ui
+except ImportError:  # direct `streamlit run src/study_agent/app.py`
+    import ui
+
 load_dotenv()
 
-# ── Page config ─────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Multi-Agent Study Assistant",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded",
+APP_DIR = Path(__file__).resolve().parent
+ui.setup("Study Assistant", icon=ui.app_icon(APP_DIR.parent.parent / "assets"))
+
+st.markdown(
+    """
+    <style>
+      .agent-row { display: flex; align-items: center; gap: .6rem; padding: .55rem .8rem;
+                   border: 1px solid #232B3D; border-radius: 10px; margin-bottom: .4rem;
+                   background: #111521; }
+      .agent-row.done { border-color: rgba(70, 211, 154, .35); }
+      .agent-row.active { border-color: rgba(139, 147, 255, .5); }
+      .agent-name { font-size: 13px; font-weight: 600; color: #E8EBF5; min-width: 92px; }
+      .agent-state { font-size: 13px; color: #9AA4B8; }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# ── Custom CSS ───────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-.agent-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 2px;
-}
-.badge-researcher { background: #dbeafe; color: #1e40af; }
-.badge-analyst    { background: #dcfce7; color: #166534; }
-.badge-critic     { background: #fef3c7; color: #92400e; }
-.badge-finaliser  { background: #f3e8ff; color: #6b21a8; }
-.score-bar {
-    height: 8px;
-    border-radius: 4px;
-    background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ── Session state initialisation ─────────────────────────────────────────────
 if "result" not in st.session_state:
     st.session_state.result = None
 if "history" not in st.session_state:
     st.session_state.history = []
-if "memory_initialized" not in st.session_state:
-    st.session_state.memory_initialized = False
 
 
 @st.cache_resource(show_spinner=False)
 def _get_memory():
-    """One Chroma client + embedding model per process.
-
-    Streamlit reruns the whole script on every interaction; caching prevents a
-    fresh 90 MiB ONNX model from being loaded each time.
-    """
+    """One Chroma client and embedding model per process."""
     from study_agent.memory.vector_store import VectorMemory
 
     return VectorMemory()
 
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("⚙️ Configuration")
-
+    ui.sidebar_brand("Study Assistant", "Multi-agent research")
     provider = st.selectbox(
-        "LLM Provider",
+        "Provider",
         ["groq", "openai", "anthropic", "ollama"],
-        help="Groq is free and hosted. Ollama is free but requires local setup."
+        help="Groq is hosted and free to start. Ollama runs locally.",
     )
-
     model_map = {
         "groq": ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
         "openai": ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
@@ -93,252 +62,254 @@ with st.sidebar:
         "ollama": ["llama3", "mistral", "phi3", "gemma2"],
     }
     model = st.selectbox("Model", model_map[provider])
+    max_iter = st.slider("Revision rounds", 1, 3, 2)
+    quality_threshold = st.slider("Quality threshold", 0.5, 0.95, 0.75, 0.05)
 
-    max_iter = st.slider(
-        "Max Critic→Analyst Iterations",
-        min_value=1, max_value=3, value=2,
-        help="Safety valve: max times Critic can send back to Analyst"
-    )
+    with st.expander("How the agents work"):
+        st.markdown(
+            "**Researcher** gathers sources and stored notes.\n\n"
+            "**Analyst** writes a structured study note.\n\n"
+            "**Critic** scores the draft and sends it back if it falls short.\n\n"
+            "**Finaliser** polishes the note and saves it to memory."
+        )
+        st.code(
+            "researcher -> analyst -> critic\n"
+            "                 ^        |\n"
+            "                 +--------+  score below threshold\n"
+            "                          |\n"
+            "                     finaliser",
+            language=None,
+        )
 
-    quality_threshold = st.slider(
-        "Quality Threshold",
-        min_value=0.5, max_value=0.95, value=0.75, step=0.05,
-        help="Score needed to pass from Critic to Finaliser"
-    )
+    with st.expander("What this demo shows"):
+        st.markdown(
+            "- Retrieval augmented generation\n"
+            "- Reflexion and critic loops\n"
+            "- Long-term memory with ChromaDB\n"
+            "- Conditional routing between agents"
+        )
 
-    st.divider()
-    st.subheader("🗺️ Agent Graph")
-    st.code("""
-researcher
-    │
-    ▼
-analyst ◄────────┐
-    │             │ (score < 0.75)
-    ▼             │
- critic  ─────────┘
-    │
-    │ (score ≥ 0.75)
-    ▼
-finaliser
-    │
-   END
-""", language=None)
+ui.page_header(
+    "Study assistant",
+    "Ask a technical question and watch four agents research, draft, review and refine the answer.",
+    eyebrow="MULTI-AGENT RESEARCH",
+    badge="4 agents ready",
+    icon_name="bot",
+)
 
-    st.divider()
-    st.subheader("📚 Concepts Shown")
-    concepts = [
-        "ReAct Pattern", "RAG Pipeline", "Chain-of-Thought",
-        "Reflexion (Critic)", "Long-term Memory", "ChromaDB",
-        "Sentence Embeddings", "Multi-Agent Orchestration",
-        "Conditional Routing", "Tool Use", "Structured Output",
-        "Few-shot Prompting", "Role/Persona Prompting",
-    ]
-    for c in concepts:
-        st.markdown(f"✅ {c}")
+ui.section(
+    "Start with a question",
+    "Pick a prompt or write your own. The answer is saved to long-term memory when the run finishes.",
+)
 
-
-# ── Main content ─────────────────────────────────────────────────────────────
-st.title("🤖 Multi-Agent Study Assistant")
-st.caption("GenAI + Agentic AI · RAG + Multi-Agent Orchestration · LangGraph Patterns")
-
-# ── Example queries ───────────────────────────────────────────────────────────
-st.subheader("💡 Quick Start — Example Queries")
-examples = [
-    "Explain transformer self-attention mechanism",
+EXAMPLES = [
+    "Explain transformer self-attention",
     "What is RAG and how does it reduce hallucination?",
-    "Explain the ReAct agent pattern with an example",
+    "Explain the ReAct agent pattern",
     "What is cosine similarity and why is it used for embeddings?",
-    "How does LangGraph StateGraph work with nodes and conditional edges?",
-    "Explain the difference between Chain-of-Thought and Plan-and-Execute",
+    "How does LangGraph StateGraph work?",
+    "Chain-of-Thought versus Plan-and-Execute",
 ]
 
-cols = st.columns(3)
-selected_example = None
-for i, ex in enumerate(examples):
-    if cols[i % 3].button(f"📌 {ex[:45]}...", key=f"ex_{i}", use_container_width=True):
-        selected_example = ex
+cols = st.columns(2)
+for index, example in enumerate(EXAMPLES):
+    if cols[index % 2].button(example, key=f"ex_{index}", width="stretch"):
+        st.session_state.query_text = example
 
-# ── Query input ───────────────────────────────────────────────────────────────
-st.divider()
-query = st.text_area(
-    "📝 Your Study Query",
-    value=selected_example or "",
-    placeholder="e.g. Explain how HNSW indexing works in vector databases",
-    height=80,
-)
-topic = st.text_input("🏷️ Topic Label (optional, for memory tagging)", placeholder="e.g. Vector Databases")
+with st.form("query_form"):
+    query = st.text_area(
+        "Your question",
+        key="query_text",
+        placeholder="e.g. Explain how HNSW indexing works in vector databases",
+        height=90,
+    )
+    topic = st.text_input(
+        "Topic label (optional)",
+        placeholder="e.g. Vector databases",
+    )
+    submitted = st.form_submit_button("Run agents", type="primary", width="stretch")
 
-run_button = st.button("🚀 Run Multi-Agent Pipeline", type="primary", use_container_width=True)
+if submitted and not query.strip():
+    ui.error_state(
+        "Enter a question before running the agents.",
+        title="Nothing to research",
+        hint="Try one of the prompts above.",
+    )
 
-# ── Run the pipeline ──────────────────────────────────────────────────────────
-if run_button and query.strip():
-    st.divider()
-    st.subheader("⚙️ Agent Pipeline Running...")
-
-    # Import here to avoid startup errors if deps missing
+if submitted and query.strip():
+    ui.section("Run", "The pipeline updates each agent as it finishes.")
     try:
         from study_agent.llm_factory import get_llm
         from study_agent.orchestrator import build_graph
-    except Exception as e:
-        st.error(f"Import error: {e}\n\nRun: pip install -r requirements.txt")
-        st.stop()
+    except Exception:
+        ui.error_state(
+            "The agent dependencies are not available in this environment.",
+            title="Study assistant unavailable",
+            hint="Install the project requirements and reload the app.",
+        )
+    else:
+        os.environ["__STUDY_AGENT_PROVIDER"] = provider
+        import study_agent.llm_factory as _lf
 
-    # Set env var for provider selection
-    os.environ["__STUDY_AGENT_PROVIDER"] = provider
-
-    # Monkeypatch the auto-detect to use UI selection
-    import study_agent.llm_factory as _lf
-    _orig = _lf._auto_detect_provider
-    _lf._auto_detect_provider = lambda: provider
-
-    try:
-        llm = get_llm(provider=provider, model=model)
-    except Exception as e:
-        st.error(f"LLM init failed: {e}")
-        _lf._auto_detect_provider = _orig
-        st.stop()
-    finally:
-        _lf._auto_detect_provider = _orig
-
-    memory = _get_memory()
-    graph = build_graph(llm=llm, memory=memory)
-
-    # ── Progress display ──────────────────────────────────────────────────
-    progress_container = st.container()
-    steps_log = []
-
-    agent_styles = {
-        "researcher": ("🔍", "badge-researcher", "Searching Wikipedia + Web + Memory"),
-        "analyst":    ("✍️", "badge-analyst",    "Writing structured study note (CoT)"),
-        "critic":     ("🔎", "badge-critic",     "Reviewing with Reflexion pattern"),
-        "finaliser":  ("✨", "badge-finaliser",  "Polishing + saving to ChromaDB"),
-    }
-
-    step_placeholders = {}
-    with progress_container:
-        for agent in ["researcher", "analyst", "critic", "finaliser"]:
-            emoji, badge, desc = agent_styles[agent]
-            step_placeholders[agent] = st.empty()
-            step_placeholders[agent].markdown(
-                f'<span class="agent-badge {badge}">⏳ {emoji} {agent.upper()}</span> '
-                f'<span style="color:#888">{desc}</span>',
-                unsafe_allow_html=True
-            )
-
-    result_placeholder = st.empty()
-    log_placeholder = st.empty()
-
-    def progress_callback(agent: str, status: str):
-        steps_log.append((agent, status))
-        emoji, badge, _ = agent_styles.get(agent.lower(), ("⚙️", "", ""))
-
-        # Update agent step display
-        if agent.lower() in step_placeholders:
-            step_placeholders[agent.lower()].markdown(
-                f'<span class="agent-badge {badge}">✅ {emoji} {agent.upper()}</span> '
-                f'<span>{status}</span>',
-                unsafe_allow_html=True
-            )
-
-    # ── Execute pipeline ──────────────────────────────────────────────────
-    with st.spinner("Multi-agent pipeline running..."):
+        original_detect = _lf._auto_detect_provider
+        _lf._auto_detect_provider = lambda: provider
         try:
-            result = graph.invoke(
-                query=query.strip(),
-                topic=topic.strip() or query.strip()[:50],
-                max_iterations=max_iter,
-                progress_callback=progress_callback,
+            llm = get_llm(provider=provider, model=model)
+        except Exception:
+            ui.error_state(
+                "The language model could not start. Check the provider key and try again.",
+                title="Model unavailable",
+                hint="Groq is the quickest provider to configure.",
             )
-            st.session_state.result = result
-            st.session_state.history.append({
-                "query": query,
-                "result": result,
-                "timestamp": datetime.now().strftime("%H:%M:%S")
-            })
-        except Exception as e:
-            st.error(f"Pipeline failed: {e}")
-            import traceback
-            st.code(traceback.format_exc())
-            st.stop()
+            llm = None
+        finally:
+            _lf._auto_detect_provider = original_detect
 
-    # ── Display results ───────────────────────────────────────────────────
-    st.divider()
-    st.subheader("📝 Final Study Note")
+        if llm is not None:
+            memory = _get_memory()
+            graph = build_graph(llm=llm, memory=memory)
 
-    # Score display
-    score = result.get("critique_score", 0)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Quality Score", f"{score:.2f}/1.00",
-                delta="Passed ✅" if score >= 0.75 else "Auto-approved")
-    col2.metric("Iterations", result.get("iteration_count", 1))
-    col3.metric("Memory Notes", memory.count())
+            steps = ["researcher", "analyst", "critic", "finaliser"]
+            descriptions = {
+                "researcher": "Searching sources and stored notes",
+                "analyst": "Writing the structured note",
+                "critic": "Scoring and reviewing the draft",
+                "finaliser": "Polishing and saving to memory",
+            }
+            placeholders = {}
+            for agent in steps:
+                placeholders[agent] = st.empty()
+                placeholders[agent].markdown(
+                    f'<div class="agent-row"><span class="agent-name">{agent.title()}</span>'
+                    f'<span class="agent-state">{descriptions[agent]}</span></div>',
+                    unsafe_allow_html=True,
+                )
 
-    # Final answer
-    st.markdown(result["final_answer"])
+            def progress_callback(agent: str, status: str) -> None:
+                key = agent.lower()
+                if key in placeholders:
+                    placeholders[key].markdown(
+                        f'<div class="agent-row done"><span class="agent-name">'
+                        f'{key.title()}</span><span class="agent-state">{status}</span></div>',
+                        unsafe_allow_html=True,
+                    )
 
-    # Expandable: intermediate outputs
-    with st.expander("🔍 Researcher Output (RAG + Search)", expanded=False):
-        docs = result.get("retrieved_docs", [])
-        if docs:
-            st.markdown(docs[0] if docs else "No research retrieved.")
-        st.markdown("**Memory Context Retrieved:**")
-        st.markdown(result.get("memory_context", "_No past notes retrieved_") or "_No past notes retrieved_")
+            with st.spinner("Running the agent pipeline..."):
+                try:
+                    result = graph.invoke(
+                        query=query.strip(),
+                        topic=topic.strip() or query.strip()[:50],
+                        max_iterations=max_iter,
+                        progress_callback=progress_callback,
+                    )
+                except Exception:
+                    ui.error_state(
+                        "The agents stopped before finishing. Check the provider key, "
+                        "then run the question again.",
+                        title="Pipeline failed",
+                        hint="Stored notes are unchanged.",
+                    )
+                    result = None
 
-    with st.expander("✍️ Analyst Draft (before critique)", expanded=False):
-        st.markdown(result.get("draft_answer", "N/A"))
+            if result is not None:
+                st.session_state.result = result
+                st.session_state.history.append(
+                    {
+                        "query": query,
+                        "result": result,
+                        "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    }
+                )
 
-    with st.expander("🔎 Critic's Review", expanded=False):
-        st.markdown(result.get("critique", "N/A"))
+                score = float(result.get("critique_score", 0))
+                ui.section(
+                    "Study note",
+                    "The final answer, with the working kept in the expanders.",
+                )
+                ui.metric_grid(
+                    [
+                        {
+                            "label": "Quality score",
+                            "value": f"{score:.2f}",
+                            "caption": "out of 1.00",
+                        },
+                        {
+                            "label": "Revision rounds",
+                            "value": str(result.get("iteration_count", 1)),
+                        },
+                        {"label": "Stored notes", "value": str(memory.count())},
+                    ]
+                )
+                st.markdown(result["final_answer"])
 
-    # Download button
-    st.download_button(
-        label="⬇️ Download Study Note (.md)",
-        data=result["final_answer"],
-        file_name=f"study_note_{topic or 'query'}.md",
-        mime="text/markdown",
-    )
+                with st.expander("Researcher sources"):
+                    docs = result.get("retrieved_docs", [])
+                    st.markdown(docs[0] if docs else "No sources retrieved.")
+                    st.markdown("**Memory context**")
+                    st.markdown(
+                        result.get("memory_context", "No past notes retrieved.")
+                        or "No past notes retrieved."
+                    )
+                with st.expander("Analyst draft"):
+                    st.markdown(result.get("draft_answer", "No draft stored."))
+                with st.expander("Critic review"):
+                    st.markdown(result.get("critique", "No review stored."))
 
-elif run_button and not query.strip():
-    st.warning("Please enter a study query first.")
+                st.download_button(
+                    "Download study note",
+                    data=result["final_answer"],
+                    file_name=f"study_note_{topic or 'query'}.md",
+                    mime="text/markdown",
+                    width="stretch",
+                )
 
-
-# ── Memory Browser ────────────────────────────────────────────────────────────
-st.divider()
-st.subheader("🧠 Long-Term Memory Browser")
-st.caption("Notes saved to ChromaDB — persisted across sessions, retrieved by semantic similarity")
+ui.section(
+    "Long-term memory",
+    "Every finished note is stored and retrieved by semantic similarity on later runs.",
+)
 
 try:
     mem = _get_memory()
-    topics = mem.list_topics()
     count = mem.count()
-
-    if count > 0:
-        st.success(f"📚 {count} study notes stored in ChromaDB")
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.write("**Topics in memory:**")
-            for t in sorted(topics):
-                st.markdown(f"• {t}")
-        with col2:
-            search_mem = st.text_input("🔍 Search memory semantically:", key="mem_search")
+    topics = mem.list_topics()
+except Exception:
+    ui.empty_state(
+        "Memory is unavailable",
+        "The vector store could not start in this environment. Runs still work, "
+        "but notes will not be saved between sessions.",
+        icon_name="database",
+    )
+else:
+    if count == 0:
+        ui.empty_state(
+            "No saved notes yet",
+            "Run a question and the finished note will appear here for reuse.",
+            icon_name="database",
+        )
+    else:
+        st.caption(f"{count} notes stored across {len(topics)} topics.")
+        left, right = st.columns([1, 2])
+        with left:
+            st.markdown("**Topics**")
+            for name in sorted(topics):
+                st.markdown(f"- {name}")
+        with right:
+            search_mem = st.text_input("Search memory", key="mem_search")
             if search_mem:
                 results = mem.retrieve(search_mem, n_results=3)
                 if results:
-                    for r in results:
-                        with st.expander(f"📄 {r['topic']} (similarity: {r.get('similarity', 0):.2f})"):
-                            st.markdown(r["content"][:500] + "...")
+                    for item in results:
+                        label = f"{item['topic']} - similarity {item.get('similarity', 0):.2f}"
+                        with st.expander(label):
+                            st.markdown(item["content"][:500] + "...")
                 else:
-                    st.info("No relevant notes found for that query.")
-    else:
-        st.info("No study notes in memory yet. Run a query to start building your knowledge base!")
-except Exception as e:
-    st.warning(f"Memory browser unavailable: {e}")
+                    ui.empty_state(
+                        "No matching notes",
+                        "Try a broader phrase or a different topic.",
+                        icon_name="search",
+                    )
 
-
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.divider()
 st.caption(
-    "**Architecture**: ReAct · Chain-of-Thought · Reflexion · RAG · "
-    "ChromaDB · sentence-transformers · LangGraph patterns · "
-    "Multi-Agent Orchestration (Researcher → Analyst → Critic → Finaliser)"
+    "Architecture: ReAct, chain-of-thought, Reflexion, RAG, ChromaDB and "
+    "LangGraph-style routing across four agents."
 )

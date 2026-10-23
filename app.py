@@ -1,13 +1,19 @@
 """
-Streamlit entry point for local dev and Streamlit Cloud deployment.
+Streamlit entry point for local dev and Render deployment.
 
-Streamlit Cloud auto-detects this file at the repo root.
-It adds src/ to the Python path, then re-exports the real app.
+Render starts this file (`streamlit run app.py`). It adds src/ to the
+Python path, then executes the real app module.
+
+`runpy` is required here: a plain `from study_agent.app import *` only
+builds the UI on the first import. Streamlit reruns this file on every
+widget interaction, but the imported module stays cached, so the page
+would go blank after the first click.
 """
+
+import runpy
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-# Re-export the real app module — Streamlit reads its top-level code
-from study_agent.app import *
+runpy.run_module("study_agent.app", run_name="__main__")
