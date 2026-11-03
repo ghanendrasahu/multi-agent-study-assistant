@@ -1,8 +1,8 @@
 # 🤖 Multi-Agent Study Assistant
 
-> **Try it live:** [![Streamlit App](https://img.shields.io/badge/Live_App-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://ghanendrasahu-multi-agent-study-assistant-app-ghxuhm.streamlit.app/)
+> **Live demo:** https://multi-agent-study-assistant-app.onrender.com
 >
-> Or clone & run locally — instructions below.
+> Free-tier hosting: the first load after idle can take 30-60 seconds.
 
 A production-style **Agentic AI** application that demonstrates the full GenAI stack:
 **LLM → Embeddings → RAG → Agent Loop → Multi-Agent Orchestration → Memory**
@@ -75,7 +75,7 @@ User Query
 ## 🚀 Quick Start
 
 ### 1️⃣ Click & Try (no setup)
-Jump straight in: **[Open Live App](https://ghanendrasahu-multi-agent-study-assistant-app-ghxuhm.streamlit.app/)** — pick a query and run it.
+Jump straight in: **[Open Live App](https://multi-agent-study-assistant-app.onrender.com)** — pick a query and run it.
 
 ### 2️⃣ Run Locally
 
