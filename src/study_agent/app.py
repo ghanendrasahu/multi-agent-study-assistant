@@ -70,11 +70,12 @@ with st.sidebar:
 
     provider = st.selectbox(
         "LLM Provider",
-        ["openai", "anthropic", "ollama"],
-        help="OpenAI recommended. Ollama is free but requires local setup."
+        ["groq", "openai", "anthropic", "ollama"],
+        help="Groq is free and hosted. Ollama is free but requires local setup."
     )
 
     model_map = {
+        "groq": ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
         "openai": ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
         "anthropic": ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022"],
         "ollama": ["llama3", "mistral", "phi3", "gemma2"],

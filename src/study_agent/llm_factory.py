@@ -4,9 +4,10 @@ llm_factory.py
 Factory for creating LLM instances.
 
 Supports:
-  1. OpenAI (GPT-4o-mini recommended — cheap and capable)
-  2. Ollama local models (llama3, mistral) — completely free, no API key
-  3. Anthropic Claude (claude-3-haiku — fast and cheap)
+  1. Groq (free tier, OpenAI-compatible)
+  2. OpenAI (GPT-4o-mini recommended - cheap and capable)
+  3. Ollama local models (llama3, mistral) - completely free, no API key
+  4. Anthropic Claude (claude-3-haiku - fast and cheap)
 
 Usage:
     llm = get_llm()  # auto-detects from env vars
@@ -39,7 +40,9 @@ def get_llm(provider: str | None = None, model: str | None = None):
     if provider is None:
         provider = _auto_detect_provider()
 
-    if provider == "ollama":
+    if provider == "groq":
+        return _get_groq(model or os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"))
+    elif provider == "ollama":
         return _get_ollama(model or "llama3")
     elif provider == "anthropic":
         return _get_anthropic(model or "claude-3-haiku-20240307")
@@ -48,13 +51,15 @@ def get_llm(provider: str | None = None, model: str | None = None):
     else:
         raise ValueError(
             f"Unknown provider: {provider}. "
-            "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or USE_OLLAMA=true"
+            "Set GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or USE_OLLAMA=true"
         )
 
 
 def _auto_detect_provider() -> str:
     if os.getenv("USE_OLLAMA", "").lower() == "true":
         return "ollama"
+    if os.getenv("GROQ_API_KEY"):
+        return "groq"
     if os.getenv("ANTHROPIC_API_KEY"):
         return "anthropic"
     if os.getenv("OPENAI_API_KEY"):
@@ -70,6 +75,22 @@ def _auto_detect_provider() -> str:
         "Option 3 (Anthropic):\n"
         "  export ANTHROPIC_API_KEY='sk-ant-...'\n"
     )
+
+
+def _get_groq(model: str):
+    try:
+        from langchain_openai import ChatOpenAI
+
+        print(f"[LLM] Using Groq: {model}")
+        return ChatOpenAI(
+            model=model,
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+            temperature=0.3,
+            max_tokens=2000,
+        )
+    except ImportError:
+        raise ImportError("Run: pip install langchain-openai")
 
 
 def _get_openai(model: str):
