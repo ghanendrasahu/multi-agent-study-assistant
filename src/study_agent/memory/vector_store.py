@@ -1,14 +1,14 @@
 """
 memory/vector_store.py
 ──────────────────────
-Long-term vector memory backed by ChromaDB + sentence-transformers.
+Long-term vector memory backed by ChromaDB.
 
 Concepts from document:
   - Long-term memory (vector store backed): retrieves semantically similar past notes
   - Episodic memory: each study session's output is stored as an episode
   - Memory retrieval with similarity search: cosine similarity via ChromaDB
   - Memory consolidation: only high-quality (score ≥ 0.75) notes are stored
-  - Embedding models: sentence-transformers (free, runs locally)
+  - Embedding models: Chroma's ONNX MiniLM (free, ~90 MiB) or sentence-transformers
   - ChromaDB architecture: persistent local storage, no API key needed
 
 Storage layout:
@@ -16,6 +16,14 @@ Storage layout:
     - content: the full study note text
     - metadata: {topic, query, score, session_id, timestamp}
     - embedding: 384-dim vector from all-MiniLM-L6-v2
+
+Embedding backend
+-----------------
+``STUDY_AGENT_EMBEDDING`` selects the encoder:
+  - ``onnx`` (default) uses Chroma's bundled ONNX MiniLM. It needs ~90 MiB of RSS,
+    which fits Render's free 512 MiB instance.
+  - ``sentence-transformers`` uses the PyTorch encoder (~530 MiB RSS) and is only
+    suitable where more memory is available; install it separately.
 """
 
 from __future__ import annotations
@@ -25,6 +33,19 @@ import os
 CHROMA_PERSIST_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "chroma_db")
 COLLECTION_NAME = "study_notes"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # Free, fast, 384 dimensions
+EMBEDDING_BACKEND = os.getenv("STUDY_AGENT_EMBEDDING", "onnx").strip().lower()
+
+
+def _build_embedding_function():
+    """Return a Chroma embedding function for the configured backend."""
+    from chromadb.utils import embedding_functions
+
+    if EMBEDDING_BACKEND in {"sentence-transformers", "sentence_transformers", "st"}:
+        return embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name=EMBEDDING_MODEL
+        )
+    # DefaultEmbeddingFunction runs the same MiniLM model through ONNX Runtime.
+    return embedding_functions.DefaultEmbeddingFunction()
 
 
 class VectorMemory:
@@ -32,7 +53,7 @@ class VectorMemory:
     Long-term semantic memory using ChromaDB.
 
     Key design decisions (from document):
-      1. sentence-transformers for embeddings — free, no API calls
+      1. Chroma's ONNX MiniLM embeddings — free, no API calls, ~90 MiB RSS
       2. ChromaDB persistent mode — survives restarts
       3. Cosine similarity (ChromaDB default) — scale-invariant
       4. n_results=3 at retrieval — bounded context window usage
@@ -50,17 +71,12 @@ class VectorMemory:
         """Lazily initialise ChromaDB and embedding model."""
         try:
             import chromadb
-            from chromadb.utils import embedding_functions
 
             os.makedirs(self.persist_dir, exist_ok=True)
 
             self._client = chromadb.PersistentClient(path=self.persist_dir)
 
-            self._embedding_fn = (
-                embedding_functions.SentenceTransformerEmbeddingFunction(
-                    model_name=EMBEDDING_MODEL
-                )
-            )
+            self._embedding_fn = _build_embedding_function()
 
             self._collection = self._client.get_or_create_collection(
                 name=COLLECTION_NAME,
@@ -74,7 +90,7 @@ class VectorMemory:
                   f"{self._collection.count()} notes stored.")
 
         except ImportError as e:
-            print(f"[Memory] ChromaDB/sentence-transformers not installed: {e}")
+            print(f"[Memory] ChromaDB/embedding backend not installed: {e}")
             print("[Memory] Falling back to in-memory dict store.")
             self._fallback_store: list[dict] = []
             self._available = False

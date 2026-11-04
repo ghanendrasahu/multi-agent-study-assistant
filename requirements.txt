@@ -6,7 +6,10 @@ langchain-community>=0.2.0
 langchain-core>=0.2.0
 langchain-anthropic>=0.1.0
 chromadb>=0.5.0
-sentence-transformers>=3.0.0
+# The default ONNX MiniLM encoder ships with chromadb (~90 MiB RSS).
+# torch/sentence-transformers needs ~530 MiB and will OOM Render's free 512 MiB
+# instance; install it separately and set STUDY_AGENT_EMBEDDING=sentence-transformers
+# when running somewhere with more memory.
 streamlit>=1.35.0
 wikipedia-api>=0.6.0
 duckduckgo-search>=6.0.0

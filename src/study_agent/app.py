@@ -64,6 +64,18 @@ if "memory_initialized" not in st.session_state:
     st.session_state.memory_initialized = False
 
 
+@st.cache_resource(show_spinner=False)
+def _get_memory():
+    """One Chroma client + embedding model per process.
+
+    Streamlit reruns the whole script on every interaction; caching prevents a
+    fresh 90 MiB ONNX model from being loaded each time.
+    """
+    from study_agent.memory.vector_store import VectorMemory
+
+    return VectorMemory()
+
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("⚙️ Configuration")
@@ -166,7 +178,6 @@ if run_button and query.strip():
     # Import here to avoid startup errors if deps missing
     try:
         from study_agent.llm_factory import get_llm
-        from study_agent.memory.vector_store import VectorMemory
         from study_agent.orchestrator import build_graph
     except Exception as e:
         st.error(f"Import error: {e}\n\nRun: pip install -r requirements.txt")
@@ -189,7 +200,7 @@ if run_button and query.strip():
     finally:
         _lf._auto_detect_provider = _orig
 
-    memory = VectorMemory()
+    memory = _get_memory()
     graph = build_graph(llm=llm, memory=memory)
 
     # ── Progress display ──────────────────────────────────────────────────
@@ -297,8 +308,7 @@ st.subheader("🧠 Long-Term Memory Browser")
 st.caption("Notes saved to ChromaDB — persisted across sessions, retrieved by semantic similarity")
 
 try:
-    from study_agent.memory.vector_store import VectorMemory
-    mem = VectorMemory()
+    mem = _get_memory()
     topics = mem.list_topics()
     count = mem.count()
 
